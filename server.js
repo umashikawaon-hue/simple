@@ -1,19 +1,25 @@
 import express from 'express';
 import { createServer } from 'node:http';
-import Rammerhead from 'rammerhead';
+import rammerheadPkg from 'rammerhead';
 import path from 'node:path';
 import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'node:url';
 
+const { RammerheadProxy } = rammerheadPkg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const server = createServer(app);
 
 const PROXY_PASSWORD = 'mysecurepassword123';
 
-// Rammerheadのセットアップ
-const rammerhead = new Rammerhead({
-    logger: console,
+// Rammerheadのセットアップ (ロガーを適切に設定)
+const rammerhead = new RammerheadProxy({
+    logger: {
+        info: console.log,
+        error: console.error,
+        debug: console.log,
+        traffic: () => {}, // ダミー関数を追加
+    },
     reverseProxy: false,
     disableLocalStorageSync: false,
 });
