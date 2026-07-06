@@ -12,13 +12,13 @@ const server = createServer(app);
 
 const PROXY_PASSWORD = 'mysecurepassword123';
 
-// Rammerheadのセットアップ (ロガーを適切に設定)
+// Rammerheadのセットアップ
 const rammerhead = new RammerheadProxy({
     logger: {
         info: console.log,
         error: console.error,
         debug: console.log,
-        traffic: () => {}, // ダミー関数を追加
+        traffic: () => {},
     },
     reverseProxy: false,
     disableLocalStorageSync: false,
@@ -46,11 +46,19 @@ app.post('/login', (req, res) => {
     }
 });
 
-// Rammerheadのリクエスト処理
+// Rammerheadのリクエスト処理 (メソッド名を修正)
 app.use((req, res, next) => {
     if (req.url.startsWith('/ram/')) {
         return authMiddleware(req, res, () => {
-            rammerhead.handleRequest(req, res);
+            // RammerheadProxyクラスでは _onRequest などの内部メソッドが使われることがあるが、
+            // 公開されているインターフェースを確認
+            if (typeof rammerhead.onRequest === 'function') {
+                rammerhead.onRequest(req, res);
+            } else if (typeof rammerhead._onRequest === 'function') {
+                rammerhead._onRequest(req, res);
+            } else {
+                res.status(500).send('Rammerhead configuration error: onRequest not found');
+            }
         });
     }
     next();
@@ -58,7 +66,13 @@ app.use((req, res, next) => {
 
 server.on('upgrade', (req, socket, head) => {
     if (req.url.startsWith('/ram/')) {
-        rammerhead.handleUpgrade(req, socket, head);
+        if (typeof rammerhead.onUpgrade === 'function') {
+            rammerhead.onUpgrade(req, socket, head);
+        } else if (typeof rammerhead._onUpgrade === 'function') {
+            rammerhead._onUpgrade(req, socket, head);
+        } else {
+            socket.end();
+        }
     } else {
         socket.end();
     }

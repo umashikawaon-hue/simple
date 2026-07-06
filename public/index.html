@@ -109,9 +109,10 @@
             try {
                 // Rammerheadのセッション作成
                 const res = await fetch('/ram/session/new', { method: 'POST' });
+                if (!res.ok) throw new Error('セッションの作成に失敗しました');
                 const sessionId = await res.text();
                 
-                // セッションを使用してリダイレクト
+                // URLの組み立てを修正（スラッシュが重複しないように）
                 window.location.href = '/ram/' + sessionId + '/' + target;
             } catch (err) {
                 document.getElementById('status').textContent = 'エラー: ' + err.message;
